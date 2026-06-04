@@ -1,0 +1,8 @@
+.env
+harness/logs/
+harness/state/
+harness/__pycache__/
+raw-transcripts/
+clean-transcripts/
+wiki/
+

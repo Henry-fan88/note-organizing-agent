@@ -1,0 +1,6 @@
+# 笔记整理 harness 依赖
+openai>=1.30.0        # 通过 OpenAI 兼容协议调用 DeepSeek
+python-dotenv>=1.0.0  # 读取 .env 中的 API Key 等配置
+markdown>=3.5         # 合并导出 PDF 时 md -> html
+# 可选：若想用 weasyprint 后端导出 PDF（需系统装 pango/cairo），再安装：
+# weasyprint>=60
