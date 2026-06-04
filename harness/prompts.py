@@ -166,26 +166,26 @@ def build_new_concept_file(course: str, title: str, concept_obj: dict, lecture_i
 # 阶段二（3）：主题索引（MOC）——聚类与排序
 # =========================================================================
 INDEX_CLUSTER_SYSTEM = (
-    "你是课程 wiki 的索引编辑。你会拿到本课程全部【概念词条】与【课堂笔记】的清单"
-    "（每条只有标题与一句话摘要）。请把它们组织成若干‘主题索引（MOC，内容地图）’。\n\n"
+    "你是课程 wiki 的索引编辑。你会拿到本课程全部【概念词条】与【课堂笔记】的带编号清单。"
+    "请把它们组织成若干‘主题索引（MOC，内容地图）’。\n\n"
     "要求：\n"
     "1. 一个主题索引 = 某一主题下相关条目的‘地图’，只负责组织与导航，"
     "不产生任何新知识、不写解释性长文。\n"
-    "2. 把概念与笔记按主题归类；同一条目可以出现在多个相关主题里。\n"
+    "2. 把概念与笔记按主题归类；条目用其编号引用（概念是 C 开头、笔记是 N 开头，如 C12、N3），"
+    "不要重复写出标题。同一条目可以出现在多个相关主题里；要尽量覆盖全部概念编号。\n"
     "3.【核心】每个主题内部要呈现清晰的【逻辑链条】：从基础到进阶，或从原因到结果，"
-    "据此给出条目的合理排列顺序，并可用 2~4 个阶段小节（stage）来体现这条逻辑链。\n"
-    "4. 主题命名要概括、稳定、像一个知识板块的名字。\n"
-    "5. 简体中文。\n\n"
-    "只输出一个 JSON 对象，格式：\n"
+    "据此排列条目顺序，并用 2~4 个阶段小节（stage）体现这条逻辑链。\n"
+    "4. 主题数量建议 6~12 个；主题命名要概括、稳定，像一个知识板块的名字。\n"
+    "5. 简体中文。务必只输出合法 JSON，不要任何额外文字。\n\n"
+    "输出格式：\n"
     "{\n"
     '  "topics": [\n'
     "    {\n"
     '      "title": "主题名",\n'
-    '      "overview": "一句话说明这个主题覆盖什么（不含新知识，仅定位）",\n'
+    '      "overview": "一句话定位本主题覆盖范围（不含新知识）",\n'
     '      "stages": [\n'
     '        {"stage": "阶段/环节名（体现逻辑链的一环）",\n'
-    '         "items": [ {"type": "concept|note", "title": "与清单完全一致的标题",\n'
-    '                     "role": "该条目在逻辑链中的极简定位（不超过12字）"} ] }\n'
+    '         "items": [ {"id": "C12", "role": "该条目在逻辑链中的极简定位(<=12字)"} ] }\n'
     "      ]\n"
     "    }\n"
     "  ]\n"
@@ -194,12 +194,16 @@ INDEX_CLUSTER_SYSTEM = (
 
 
 def build_index_cluster_user(course: str, concepts: list, notes: list) -> str:
-    c_block = "\n".join(f"- [概念] {c['title']}：{c.get('summary','')}" for c in concepts) or "（无）"
-    n_block = "\n".join(f"- [笔记] {n['title']}（{n['lecture']}）" for n in notes) or "（无）"
+    """concepts/notes 每项需含 'id' 字段（C1.../N1...）。"""
+    c_block = "\n".join(
+        f"{c['id']}: {c['title']}" + (f" — {c.get('summary','')[:30]}" if c.get("summary") else "")
+        for c in concepts
+    ) or "（无）"
+    n_block = "\n".join(f"{n['id']}: {n['title']}（{n['lecture']}）" for n in notes) or "（无）"
     return (
         f"课程：{course}\n\n"
-        "【全部概念词条】\n"
+        f"【全部概念词条 共{len(concepts)}条】\n"
         f"{c_block}\n\n"
-        "【全部课堂笔记】\n"
+        f"【全部课堂笔记 共{len(notes)}条】\n"
         f"{n_block}\n"
     )
