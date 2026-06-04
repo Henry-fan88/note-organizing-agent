@@ -45,7 +45,7 @@ def cmd_dryrun(_args):
 
 
 def cmd_clean(args):
-    p1.run(force=args.force)
+    p1.run(force=args.force, only=getattr(args, "only", None))
 
 
 def cmd_notes(args):
@@ -102,7 +102,11 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("status").set_defaults(func=cmd_status)
     sub.add_parser("dryrun").set_defaults(func=cmd_dryrun)
-    for name, fn in (("clean", cmd_clean), ("notes", cmd_notes), ("concepts", cmd_concepts)):
+    pc = sub.add_parser("clean")
+    pc.add_argument("--force", action="store_true", help="忽略已有产物，强制重做")
+    pc.add_argument("--only", default=None, help="仅处理文件名包含该字符串的转写，如 2026-03-02")
+    pc.set_defaults(func=cmd_clean)
+    for name, fn in (("notes", cmd_notes), ("concepts", cmd_concepts)):
         p = sub.add_parser(name)
         p.add_argument("--force", action="store_true", help="忽略已有产物，强制重做")
         p.set_defaults(func=fn)

@@ -58,6 +58,11 @@ def _log_usage(tag, usage):
 
 def chat(messages, temperature=0.3, max_tokens=None, json_mode=False, tag="chat"):
     """单次调用，返回 (内容文本, finish_reason)。带重试。"""
+    if not config.API_KEY:
+        raise RuntimeError(
+            "缺少 DEEPSEEK_API_KEY。请先 cp .env.example .env 并填入密钥，"
+            "或 export DEEPSEEK_API_KEY=sk-xxx 后再运行。"
+        )
     max_tokens = max_tokens or config.MAX_TOKENS
     kwargs = dict(
         model=config.MODEL,

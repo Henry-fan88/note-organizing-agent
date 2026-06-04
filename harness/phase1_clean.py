@@ -62,15 +62,20 @@ def clean_one(raw_path, force=False, dry_run=False):
     return out_path
 
 
-def run(force=False, dry_run=False):
+def run(force=False, dry_run=False, only=None):
     config.ensure_dirs()
     raws = list_raw()
+    if only:
+        raws = [r for r in raws if only in r.name]
     print(f"=== 阶段一：清洗 {len(raws)} 个转写文件 ===")
+    if not raws:
+        print(f"  没有匹配 '{only}' 的转写文件。" if only else "  raw-transcripts/ 下没有 .txt。")
+        return
     for r in raws:
         print(f"- {r.name}")
         clean_one(r, force=force, dry_run=dry_run)
     if not dry_run:
-        print("阶段一完成。")
+        print("阶段一完成。" if not only else "（单文件测试完成。）")
 
 
 def is_complete() -> bool:
