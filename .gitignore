@@ -1,4 +1,5 @@
 .env
+.venv
 harness/logs/
 harness/state/
 harness/__pycache__/
