@@ -10,8 +10,24 @@
 """
 import config
 import utils
-from deepseek_client import chat_complete
+from deepseek_client import complete_split_on_risk
 from prompts import CLEAN_SYSTEM, build_clean_user
+
+
+def _risk_fallback(text):
+    """清洗到最小粒度仍被内容审核拦截：保留原始转写并加可见标记，不丢内容。"""
+    return (
+        "<!-- 本段未能清洗：DeepSeek 内容审核拦截（Content Exists Risk），以下为原始转写 -->\n"
+        + text
+    )
+
+
+def _clean_chunk_lines(lines, tag):
+    """清洗一个块（行列表）。被内容审核拦截时自动二分重试、到底仍被拒则保留原文。"""
+    return complete_split_on_risk(
+        CLEAN_SYSTEM, build_clean_user, lines, _risk_fallback,
+        temperature=config.TEMP_CLEAN, tag=tag,
+    )
 
 
 def list_raw():
@@ -40,12 +56,7 @@ def clean_one(raw_path, force=False, dry_run=False):
     cleaned = []
     for i, ch in enumerate(chunks, 1):
         print(f"    清洗块 {i}/{len(chunks)} ...")
-        txt = chat_complete(
-            CLEAN_SYSTEM,
-            build_clean_user("\n".join(ch)),
-            temperature=config.TEMP_CLEAN,
-            tag=f"clean:{lid}:{i}",
-        )
+        txt = _clean_chunk_lines(ch, tag=f"clean:{lid}:{i}")
         cleaned.append(txt.strip())
 
     body = "\n\n".join(p for p in cleaned if p)
@@ -71,9 +82,19 @@ def run(force=False, dry_run=False, only=None):
     if not raws:
         print(f"  没有匹配 '{only}' 的转写文件。" if only else "  raw-transcripts/ 下没有 .txt。")
         return
+    failed = []
     for r in raws:
         print(f"- {r.name}")
-        clean_one(r, force=force, dry_run=dry_run)
+        try:
+            clean_one(r, force=force, dry_run=dry_run)
+        except Exception as e:  # noqa: BLE001
+            # 单个文件硬失败（如多次超时）不应中断整批；记录后继续，最后汇总。
+            failed.append((r.name, e))
+            print(f"  [error] 处理 {r.name} 失败，已跳过：{e}")
+    if failed:
+        print(f"\n[!] 有 {len(failed)} 个文件未完成：")
+        for name, e in failed:
+            print(f"    - {name}: {e}")
     if not dry_run:
         print("阶段一完成。" if not only else "（单文件测试完成。）")
 

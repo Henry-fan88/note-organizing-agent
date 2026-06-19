@@ -18,6 +18,24 @@ import config
 _client = None
 
 
+class ContentRiskError(RuntimeError):
+    """DeepSeek 输入内容审核拦截（400 Content Exists Risk）。
+
+    这是确定性的、不可重试的错误：同一段文本每次都会被拒。调用方应据此降级
+    （如把块拆细重试 / 保留原文），而不是当成临时故障去重试。
+    """
+
+
+def _is_content_risk(e) -> bool:
+    """判断异常是否为内容审核类 400（重试无意义）。"""
+    msg = str(e)
+    low = msg.lower()
+    if "content exists risk" in low:
+        return True
+    status = getattr(e, "status_code", None)
+    return status == 400 and ("risk" in low or "审核" in msg)
+
+
 def _get_client():
     global _client
     if _client is None:
@@ -83,6 +101,10 @@ def chat(messages, temperature=0.3, max_tokens=None, json_mode=False, tag="chat"
             choice = resp.choices[0]
             return (choice.message.content or ""), choice.finish_reason
         except Exception as e:  # noqa: BLE001
+            # 内容审核拦截是确定性错误，重试只会反复失败、白白浪费退避时间——立即抛出专用异常。
+            if _is_content_risk(e):
+                print(f"    [risk] 内容审核拦截 tag={tag}: {e} — 不重试，交由上层降级处理")
+                raise ContentRiskError(str(e)) from e
             last_err = e
             wait = min(60, 2 ** attempt)
             print(f"    [warn] API 失败 ({attempt + 1}/{config.MAX_RETRIES}) tag={tag}: {e} — {wait}s 后重试")
@@ -110,3 +132,30 @@ def chat_complete(system, user, temperature=0.3, max_tokens=None, tag="chat", ma
         full += out
         cont += 1
     return full
+
+
+def complete_split_on_risk(system, build_user, lines, on_blocked,
+                           temperature=0.3, tag="chat", max_depth=5, join="\n\n"):
+    """对一段文本调用 chat_complete；若被内容审核拦截（ContentRiskError），
+    按行二分递归重试，各段结果用 join 拼接；到最小粒度仍被拒时调用 on_blocked(text) 兜底。
+
+    适用于“整段输入里只有一小部分触发审核”的场景（清洗/笔记/概念抽取都是）：
+    拆细后绝大部分仍能正常处理，不丢内容、不中断流程。
+    - build_user(text): 把一段文本拼成完整的 user prompt。
+    - on_blocked(text): 该段到最小粒度仍被拒时的兜底返回（如保留原文/占位）。
+    """
+    def _go(seg_lines, depth, sub_tag):
+        text = "\n".join(seg_lines)
+        try:
+            return chat_complete(system, build_user(text), temperature=temperature, tag=sub_tag).strip()
+        except ContentRiskError:
+            if len(seg_lines) > 1 and depth < max_depth:
+                mid = len(seg_lines) // 2
+                print(f"    [risk] {sub_tag} 被拦截，拆成 {mid}+{len(seg_lines) - mid} 行分别重试 ...")
+                left = _go(seg_lines[:mid], depth + 1, sub_tag + "a")
+                right = _go(seg_lines[mid:], depth + 1, sub_tag + "b")
+                return (left + join + right).strip()
+            print(f"    [risk] {sub_tag} 最小粒度仍被拦截，触发兜底。")
+            return on_blocked(text)
+
+    return _go(list(lines), 0, tag)

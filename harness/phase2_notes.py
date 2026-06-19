@@ -7,7 +7,7 @@
 """
 import config
 import utils
-from deepseek_client import chat_complete
+from deepseek_client import complete_split_on_risk
 from prompts import NOTES_SYSTEM, build_notes_user
 
 
@@ -37,11 +37,22 @@ def run(force=False):
             continue
         text = c.read_text(encoding="utf-8")
         print(f"  生成笔记: {out.name}")
-        md = chat_complete(
+
+        def _build_user(seg, _lid=lid):
+            return build_notes_user(config.COURSE_NAME, _lid, seg)
+
+        def _blocked(seg, _lid=lid):
+            # 该段讲稿被内容审核拦截、无法生成笔记：保留原始讲稿并加标记，不丢内容、不中断。
+            print(f"    [risk] notes:{_lid} 有片段无法生成笔记，已保留原始讲稿。")
+            return (
+                "<!-- 本段无法生成笔记：DeepSeek 内容审核拦截（Content Exists Risk），以下为原始讲稿 -->\n"
+                + seg
+            )
+
+        md = complete_split_on_risk(
             NOTES_SYSTEM.replace("{course}", config.COURSE_NAME),
-            build_notes_user(config.COURSE_NAME, lid, text),
-            temperature=config.TEMP_NOTES,
-            tag=f"notes:{lid}",
+            _build_user, text.splitlines(), _blocked,
+            temperature=config.TEMP_NOTES, tag=f"notes:{lid}",
         )
         utils.write_text(out, md.strip() + "\n")
     print("阶段二·笔记完成。")
