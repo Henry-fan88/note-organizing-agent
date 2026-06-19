@@ -48,7 +48,7 @@ def _cjk_font() -> str:
 # 开头的“使用指南”（段落式）
 USAGE_GUIDE = """# 使用指南
 
-本手册由《中国历史地理》课程的全部课堂录播转写稿整理而成，目的是提供一份既能系统复习、又能随查随用的资料。全书分为三个部分，彼此呼应又各自独立。
+本手册由《中国经济思想史》课程的全部课堂录播转写稿整理而成，目的是提供一份既能系统复习、又能随查随用的资料。全书分为三个部分，彼此呼应又各自独立。
 
 **第一部分 · 主题索引** 是全课程的知识地图（MOC）。它不讲新知识，只把分散的概念与笔记按内在逻辑（从基础到进阶、从原因到结果）重新串联起来，帮助你在脑中建立整门课的框架。其中每个条目都可以点击，跳转到对应的概念词条或课堂笔记。建议在通读前后各看一遍，用来建立并检验自己的知识结构。
 
@@ -310,7 +310,7 @@ def to_pdf(md_path, html_path, backend="auto"):
         cmd = ["pandoc", str(src), "-o", str(out_pdf), "--pdf-engine=xelatex",
                "-V", f"CJKmainfont={font}", "-V", "CJKoptions=AutoFakeBold=3",
                "-V", "geometry:margin=2cm", "-V", "linkcolor=blue",
-               "-V", "title=中国历史地理 · 复习合订本",
+               "-V", "title=中国经济思想史 · 复习合订本",
                f"--include-in-header={header}"]
         print(f"  使用 pandoc + xelatex 导出（CJK 字体：{font}）...")
         r = subprocess.run(cmd, env=env, capture_output=True, text=True)

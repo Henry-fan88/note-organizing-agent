@@ -47,7 +47,7 @@ TEMP_CONCEPTS = float(os.getenv("TEMP_CONCEPTS", "0.35"))
 TEMP_INDEX = float(os.getenv("TEMP_INDEX", "0.3"))
 
 # ============ 课程信息 ============
-COURSE_NAME = os.getenv("COURSE_NAME", "中国历史地理")
+COURSE_NAME = os.getenv("COURSE_NAME", "中国经济思想史")
 
 
 def ensure_dirs():

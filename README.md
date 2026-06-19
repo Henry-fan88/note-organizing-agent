@@ -1,4 +1,4 @@
-# 中国历史地理 · 笔记整理 Harness
+# 中国经济思想史 · 笔记整理 Harness
 
 把本地 Whisper 转写稿，分两阶段整理成一套可复习的中文 wiki，并导出为一个 PDF。
 全流程接入 **DeepSeek API**，由 `harness/` 下的脚本编排。
@@ -89,7 +89,7 @@ python harness/run.py all
 - 想要更精致排版可 `brew install pandoc`，本机已有 TinyTeX(xelatex)，pandoc 会优先被使用。
 - 指定后端：`python harness/run.py pdf --backend chrome`。
 - 兜底：任何后端都失败时，手动打开 `wiki/_build/combined.html`，浏览器“打印 → 存为 PDF”。
-- 产物：`wiki/_build/中国历史地理_复习合订本.pdf`，章节顺序 **索引 → 概念 → 笔记**，
+- 产物：`wiki/_build/中国经济思想史_复习合订本.pdf`，章节顺序 **索引 → 概念 → 笔记**，
   且文件间交叉链接已改写为 PDF 内部可点击锚点。
 
 ---

@@ -67,7 +67,7 @@ def save_json(path, obj):
 
 
 def lecture_id_from_path(path) -> str:
-    """从文件名提取课时 ID，如 中国历史地理_2026-03-02.txt -> 2026-03-02。"""
+    """从文件名提取课时 ID，如 中国经济思想史_2026-03-02.txt -> 2026-03-02。"""
     stem = Path(path).stem
     m = re.search(r"(\d{4}-\d{2}-\d{2})", stem)
     return m.group(1) if m else stem
