@@ -11,7 +11,7 @@
 """
 import config
 import utils
-from deepseek_client import chat
+from deepseek_client import ContentRiskError, chat
 from phase2_concepts import _load_registry
 from prompts import INDEX_CLUSTER_SYSTEM, build_index_cluster_user
 
@@ -54,16 +54,21 @@ def _collect_notes():
 def _cluster(concepts, notes):
     """带重试的聚类；返回 topics 列表（可能为空，交由上层兜底）。"""
     for attempt in range(3):
-        raw, _ = chat(
-            [
-                {"role": "system", "content": INDEX_CLUSTER_SYSTEM},
-                {"role": "user", "content": build_index_cluster_user(config.COURSE_NAME, concepts, notes)},
-            ],
-            temperature=config.TEMP_INDEX,
-            max_tokens=config.MAX_TOKENS,
-            json_mode=True,
-            tag=f"index-cluster:{attempt + 1}",
-        )
+        try:
+            raw, _ = chat(
+                [
+                    {"role": "system", "content": INDEX_CLUSTER_SYSTEM},
+                    {"role": "user", "content": build_index_cluster_user(config.COURSE_NAME, concepts, notes)},
+                ],
+                temperature=config.TEMP_INDEX,
+                max_tokens=config.MAX_TOKENS,
+                json_mode=True,
+                tag=f"index-cluster:{attempt + 1}",
+            )
+        except ContentRiskError:
+            # 聚类输入（概念/笔记标题）被内容审核拦截：重试无意义，直接交给确定性兜底。
+            print("  [risk] 聚类输入被内容审核拦截，改用按课时分组的确定性兜底索引。")
+            return []
         raw = (raw or "").strip()
         if not raw:
             print(f"  [warn] 聚类返回为空（第 {attempt + 1}/3 次），重试 ...")
